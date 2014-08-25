@@ -1,0 +1,15 @@
+# space-ed
+
+This is a project intending to push the boundaries of control systems within music to create performance tools operating from  minimal state to encourage improvisation.
+
+this includes tools for the sequencing of samples
+
+## Usage
+
+No fixed usage 
+
+## License
+
+Copyright (C) 2014 FIXME
+
+Distributed under the Eclipse Public License, the same as Clojure.

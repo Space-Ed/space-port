@@ -1,0 +1,12 @@
+(defmacro macdaddy
+  [an-unbound-symbol a-bound-symbol a-primative a-sexp a-seq-literal a-func]
+  `(def ~an-unbound-symbol []
+     ~a-func)
+  (println (an-unbound-symbol a-primative)))
+
+(def toast "toast")
+
+(macdaddy ho toast 2 (print "do, re mi") ["so" "la" "ti"] inc)
+(ho)
+
+(defsplice stopper (ctls :axiom) {16 (fn [x] (stop))} :ctl)
