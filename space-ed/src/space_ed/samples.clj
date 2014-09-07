@@ -98,8 +98,16 @@
     (defn onomataplayer [i] ((onomatapaea i)))))
 
 (defn get-sample-player [samples] 
-  (fn [e] 
-    (if (contains? :note) 
-      ((samples (e :note)))
-      (if (contains? :notes)
-        (doseq [n (e :notes)] ((samples n)))))))
+  {:on (fn [e] 
+         (if (and (contains? e :note) (not (coll? (e :note)))) 
+           ((nth samples (e :note)))
+           (if (contains? e :notes) 
+             (doseq [n (e :notes)] ((samples n)))
+             (doseq [n (e :note)] ((nth samples n))))))})
+
+(load-my-samples)
+
+(def kitted (get-sample-player kit))
+
+((kitted :on) {:note 0}) 
+

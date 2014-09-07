@@ -1,4 +1,4 @@
-(ns space-ed.selection
+(ns space-ed.gentree
   "this namespace is where to define generators that output selection indicies for instruments and sample sets"
   (:require [clojure.math.numeric-tower :as math]
             [clojure.set :as set]
@@ -10,13 +10,13 @@
   (into (conj (subvec vec-coll 0 insdex) item) (subvec vec-coll (+ 1 insdex))))
 
 (defprotocol Instree
-  (extract2 [tree ext-params])
+  (extract [tree ext-params])
   (insert [tree node-key insertion-args])
   )
 
 (defrecord Gentree [mode scope-dq root node-constructors]
   Instree
-  (extract2 [tree ext-params]
+  (extract [tree ext-params]
     (g/extract @root ext-params))
   (insert [tree node-key insertion-args]
     ;;first we check if there is anything on the stack, if not
@@ -58,16 +58,15 @@
   )
 
 (defn gentree []
+  "create a generator tree
+   Defaults:   
+        mode: breadth first insertion
+        operations: +, |-|, * , quot, mod-left, mod-right,
+                     constant(c), bounce-input 
+        root: nil"
   (Gentree. (atom :breadth-first) (atom []) (atom nil) g/basic-ops ))
 
-(comment
-  (def t1 (gentree))
-  (insert t1 :|-| [])
-  (insert t1 :+ [])
-  (insert t1 :* [])
-  (insert t1 :<| [])
-  (. t1 root)
-  (extract2 t1 [5]))
+
 
 ;;before we get carried away with the possibilities of many many selection trees simultaneously
 ;;let us simply provide the access point for a single one
@@ -79,7 +78,7 @@
   ([key args] (insert @the-one key args)))
 
 (defn extract-one [ext-params]
-  (extract2 @the-one ext-params))
+  (extract @the-one ext-params))
 
 ;we want to extend the extraction function to have the default argument to be
 (defn call-count-appender [f counter*]
@@ -96,6 +95,7 @@
   (reset! the-one (gentree)))
 
 (def axiom-ctls
+  "mapping note values to operation keys"
   {36 :+
    37 :|-|
    38 :*
@@ -128,3 +128,42 @@
               )
        :held held
        }))
+
+(defn g-control-single [note-key-map g-control-map]
+  "get a controller for a single gentree
+   there are 3 components 
+    ops is the operation insertion uses on only
+    nums is the  numerical constant insertion argument
+         when a number is held the operations will be inserted with the argument
+    cont is the controls for changing mode :toggle and resetting :reset
+
+note-key-map is a mapping from note values to operation keys
+g-control-map is a mapping from note values to :toggle or :reset"
+  (let [g-tree (atom (gentree))
+        held (atom nil)
+        actions {:reset #(reset! g-tree (gentree))
+                 :toggle #(toggle-mode! (. g-tree mode))}
+        command-f (fn [{note :note on :velocity-f}]
+                    (let [command (g-control-map :note)] 
+                      (if (and (contains? actions command) (not= 0 on))
+                        ((actions command)))))]
+    {
+     :ops {
+           :on (fn [{note :note}]
+                 (if (nil? @held)
+                   (insert @g-tree (note-key-map note) [])
+                   (insert @g-tree (note-key-map note) [@held])
+                   ))}
+     :nums {
+            :on (fn [{note :note}]
+                  (reset! held note))
+            :off (fn [e]
+                   (reset! held nil))}
+     :cont {
+            :ctl command-f
+            :on command-f
+            }
+     :on (fn [e] (assoc e :note (extract @g-tree [(e :note)]))) 
+     }
+    )
+  )

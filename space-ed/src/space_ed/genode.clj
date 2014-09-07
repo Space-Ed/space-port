@@ -69,6 +69,18 @@
 (def combined-d (applied differ))
 (def conduced-d (conduced differ))
 
+(def mod 
+  (fn [num div] 
+    (if (= div 0)
+     0 
+    (clojure.core/mod num div))))
+
+(def quot
+    (fn [num div] 
+    (if (= div 0)
+     0 
+    (clojure.core/quot num div))))
+
 (comment
   (reduced-d [1 2 3])   ;stack collapse
   (combined-d [1 2 3])  ;web collect
@@ -91,11 +103,13 @@
   ([] (Genode. (applied +) (atom [nil nil]))))
 
 (defn mod-node-r
-  ([default]  (Genode. (reduced mod) (atom [(const-node default) nil])))
+  ([default]  (Genode. (reduced mod)
+                         (atom [(const-node default) nil])))
   ([] (Genode. (reduced mod) (atom [nil nil]))))
 
 (defn mod-node-l
-  ([default](Genode. (reversed (reduced mod)) (atom [(const-node default) nil])))
+  ([default](Genode. (reversed (reduced mod)) 
+                      (atom [(const-node default) nil])))
   ([](Genode. (reversed (reduced mod)) (atom [nil nil]))))
 
 (defn mult-node

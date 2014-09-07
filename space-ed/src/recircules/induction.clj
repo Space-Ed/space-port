@@ -4,7 +4,7 @@
 
 "this namespace is for the creation of systems that interpret midi events and introduce them into loops
 
-There is a foundational strructure to consider here, it represents a loop sequencing. 
+There is a foundational structure to consider here, it represents a loop sequencing. 
 
 The appropriate structure for this is an ordered vector of proportions, a pattern and 
 another vector of corresponding entities present at the time that proportion encodes.
@@ -61,9 +61,18 @@ A point inducting (1 key) control and a delay quantized to the points. Both on a
 fixed period. 
 
 
-"
+Stage 2: 
+A point inducting control with scheduling for on and off coupled with a deduction mechanism
+ to eliminate based off the pattern ON(B) ON(A) OFF(B) -> Del(A)
 
-(defprotocol)
+Stage 3:
+A scheme for multiple sequencers for many independent rhythms 
+
+Stage 4:
+Density Regulated filtration
+
+
+"
 
 (defn induct! [pattern* point]
   "introduce this new point into this one in the appropriate location,

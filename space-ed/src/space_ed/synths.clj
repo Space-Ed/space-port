@@ -2,7 +2,9 @@
   (:use [overtone.core])
   (:require [overtone.speech :as speech]))
 
-(boot-external-server)
+(if 
+  (not (server-connected?))
+  (boot-external-server))
 
 (defn get-gate-controller-m2 [inst]
   (fn [x]
@@ -12,6 +14,7 @@
   (fn [x]
     (ctl inst :freq (quantization (+ x basis)))))
 
+(def fm-bus (audio-bus 1 ))
 
 (defsynth fm-gogo 
   [base-f 220
@@ -22,17 +25,10 @@
     [mod1-osc (sin-osc (/ base-f mod1-fr))
      mod1-mod (* mod1-osc (/ base-f mod1-dr))
      base-osc (sin-osc (+ base-f mod1-mod))]
-    (out fm-bus base-osc)))
-
-(def fm1 (fm-gogo))
-(kill fm1)
-
-(ctl fm1 :mod1-dr 1 :mod1-fr 4)
-
-(def fm-bus (audio-bus 1 ))
+    (out [0 fm-bus]base-osc)))
 
 (defsynth fm3 
-  [base-f 440
+  [freq 440
    fr12   1
    fr23   1
    
@@ -45,15 +41,21 @@
    o3     0]
   (let [
         
-        f3 (* base-f fr12 fr23) 
+        f3 (* freq (/ 1 (* fr12 fr23)) ) 
         S3 (sin-osc:ar f3)
-        f2 (+ (* base-f fr12) (* S3 (- 1 (/ 1 dr32))))
+        f2 (+ (/ freq fr12) (* S3 (- 1 (/ 1 dr32))))
         S2 (sin-osc:ar f2)
-        f1 (+ base-f (* S3 (- 1 (/ 1 dr31))) (* S2 (- 1 (/ 1 dr21))))
+        f1 (+ freq (* S3 (- 1 (/ 1 dr31))) (* S2 (- 1 (/ 1 dr21))))
         S1 (sin-osc:ar f1)
         o  (+ (* o1 S1)(* o2 S2)(* o3 S3))]
-    (out fm-bus o)))
-
+    (out [0 1] o)))
+;
+;(kill fm3inst)
+;(def fm3inst (fm3))
+;(ctl fm3inst :dr32 8)
+;(ctl fm3inst :fr23 8)
+;(ctl fm3inst :o3 1)
+ 
 (defsynth my-synth
   [freq 220
    vel  0.6
@@ -68,15 +70,11 @@
     (out [0 1] (* vel enved))
     )
   )
-
-(def my-synthstance (my-synth))
-(kill my-synthstance)
-(ctl my-synthstance :gate 0)
-(ctl my-synthstance :gate 1)
-
-(node-active? my-synthstance)
-(node-live? my-synthstance)
-(node-tree-seq my-synthstance)
+;
+;(def my-synthstance (my-synth))
+;(kill my-synthstance)
+;(ctl my-synthstance :gate 0)
+;(ctl my-synthstance :gate 1)
 
 (defsynth the-generica
   [freq 440
@@ -434,7 +432,7 @@
    (local-out (+ [bridge-refl nut-refl] new-vel))
    (resonz (* bridge 0.5) 500 0.85)))
 
-(comment definst flute
+(definst flute
   [gate 1
    freq 440
    amp 1.0
@@ -448,7 +446,7 @@
   (let [nenv           (env-gen (linen 0.2 0.03 0.5 0.5) :action FREE)
         adsr           (+ (* amp 0.2) (env-gen (adsr 0.005 0.01 1.1 0.01) gate :action FREE))
         noise          (* (white-noise) noise-gain)
-        vibrato        (sin-osc vibfreq 0 vib-gain)
+        vibrato        (sin-osc vibfreq vib-gain)
         delay          (reciprocal (* freq 0.66666))
         lastout        (local-in 1)
         breathpressure (* adsr (+ noise, vibrato))
@@ -459,3 +457,8 @@
         boredelay      (delay-l (+ jet (* endreflection filter) 0.05 delay))]
     (local-out boredelay)
     (* 0.3 boredelay amp nenv)))
+
+
+
+
+

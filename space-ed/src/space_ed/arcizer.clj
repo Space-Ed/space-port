@@ -140,7 +140,7 @@ cate is true then returns the rest as a lazy sequence"
                     (reset! a (apply arcizer @args))))
                 )
          :arcizer a
-         :sub {:on (fn [x] (@a x))}}
+         :sub {:on (fn [x] (assoc x :note (@a (x :note))))}}
         ))
   ([] (arc-control {1 :pos 2 :wid 3 :base 4 :oct}))
   )

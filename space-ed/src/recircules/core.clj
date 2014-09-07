@@ -111,14 +111,8 @@ y is its accentuation "
   {from-key (fn [e] (reset! (target-map to-key) (e event-key) ))}
 )
 
-(comment
-(defmulti get-multi-control-setter [target-map crossing event-key]
-  "a means of mapping a number of adjacent controls onto the ")
-
-(defmethod get-multi-control-setter [crossing]) 
-)
-
 (defn target-densities [coll integrator]
+  "a function to resolve the target density values for each point by integrating to the next point from each point"
   (loop [front (first coll)
          from (first coll)
          to    (second coll)
@@ -198,6 +192,8 @@ The other seqs are supposed to be the same length the function will stop if any 
  )
 
  (defn st-filter-func []
+   "Gets a state map with atoms for the decide random function's stochasticity and tolerance arguments
+    leaving the other arguments for the target and metric functions to resolve in the density filtering process"
    (let
      [s (atom 0)
       t (atom 0.5)
@@ -210,6 +206,10 @@ The other seqs are supposed to be the same length the function will stop if any 
  
  ;;density regulation filter gives the {0,1} values after the density is calculated and the difference is 
  (defn density-regulation-filter [points actual-df target-df filter-f]
+   "Returns a filtered version of the points using the threefold model 
+
+   actual-df a function on a sequence of point that finds the densities for each point
+   targer-df a function "
    (let
      [density-seq (actual-df points)
       target-seq (target-densities points target-df)
@@ -232,7 +232,7 @@ The other seqs are supposed to be the same length the function will stop if any 
       (doseq [i (range c)]
         (ovt/apply-at (+ time (* (nth filtered-points i ) period)) ovt/event loop-key {:note i} [])
         )
-      (ovt/apply-at (+ time period) DRF-loop period drf points-source [])
+      (ovt/apply-at (+ time period) DRF-loop period drf points-source loop-key [])
       )
     )
   ([period drf points-source] (DRF-loop period drf points-source :DRF-loop))
@@ -246,21 +246,52 @@ The other seqs are supposed to be the same length the function will stop if any 
    useful for loops to attach many interpreters to the same looping pattern
    this is a special case where :loop control types are interpreted. This differentiates it from on off ctl"
   (let 
-    [source (space-ed.control/generate-control-source [:loop])]
+    [source (space-ed.control/generate-control-source [:on])]
      (ovt/on-event loop-key 
-                   (fn [e] (@(source :loop) e))
+                   (fn [e] (@(source :on) e))
                    handler-key)
-     (assoc source :handler handler-key)))
+     source))
+
+;;an example drf
+(def DRF-alpha #(density-regulation-filter % 
+                                           nu-densities 
+                                           (sin-ext-ctl :f) 
+                                           (filter-f-alpha :f)))
+     
+(defn DRF-control [param-map]
+  "contruct a looper controller that will provide an control interface for adjusting the
+
+param-map: A map from the control event note numbers to the parameters of which we have 
+
+:t :tolerance
+:s :stochasticity
+:p :phase
+:e :extent" 
+  (let
+    [regulator (control-xy sinutrol)
+     metric    (st-filter-func)
+     drf       (fn [points]
+                 (density-regulation-filter points
+                                            nu-densities         ;; might be parametrised
+                                            (regulator :f)
+                                            (metric :f)))]
+  {:ctl (fn [e] 
+          (let[param (param-map (e :note))
+               val   (e :velocity-f)]
+            (case param
+              :t (reset! (metric :t) val)
+              :s (reset! (metric :s) val)
+              :p (reset! (regulator :x) val) 
+              :e (reset! (regulator :y) val))))
+   :drf drf}
+  )
+)
+
 
 (comment
   "A TEST PATTERN"
    (ovt/event-debug-on)
   
-  (def DRF-alpha #(density-regulation-filter % 
-                                           nu-densities 
-                                           (sin-ext-ctl :f) 
-                                           (filter-f-alpha :f)))
-     
  
  (reset! (sin-ext-ctl :x) 0.1)
  (reset! (sin-ext-ctl :y) 1)
